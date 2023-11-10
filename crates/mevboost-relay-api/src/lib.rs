@@ -19,19 +19,19 @@ pub mod constants;
 /// Types used in the library.
 pub mod types;
 
-/// MevBoostBlocks client.
+/// Mevboost relay API client.
 ///
-/// When created with [`MevBoostBlocks::default()`], the client will use the default list of relays.
-/// These can be overridden in the library by using [`MevBoostBlocks::with_relays()`] instead.
+/// When created with [`Client::default()`], the client will use the default list of relays.
+/// These can be overridden in the library by using [`Client::with_relays()`] instead.
 #[derive(Debug)]
-pub struct MevBoostBlocks<'a> {
+pub struct Client<'a> {
     /// List of relay names and endpoints to use for queries.
     relays: HashMap<&'a str, &'a str>,
     /// HTTP client used for requests.
     client: reqwest::Client,
 }
 
-impl<'a> Default for MevBoostBlocks<'a> {
+impl<'a> Default for Client<'a> {
     fn default() -> Self {
         Self {
             relays: constants::DEFAULT_RELAYS.clone(),
@@ -40,8 +40,8 @@ impl<'a> Default for MevBoostBlocks<'a> {
     }
 }
 
-impl<'a> MevBoostBlocks<'a> {
-    /// Create a new MevBoostBlocks client with a custom list of relays.
+impl<'a> Client<'a> {
+    /// Create a new MevBoost Relay API client with a custom list of relays.
     ///
     /// Relays are a mapping of relay names to their endpoints.
     /// See [`constants::DEFAULT_RELAYS`] for an example.
@@ -53,7 +53,7 @@ impl<'a> MevBoostBlocks<'a> {
     /// Perform a relay query for validator registrations for the current and next epochs.
     ///
     /// [Visit the docs](https://flashbots.github.io/relay-specs/#/Builder/getValidators) for more info.
-    pub async fn query_get_validators_for_current_and_next_epoch(
+    pub async fn get_validators_for_current_and_next_epoch(
         &self,
         relay_name: &str,
     ) -> anyhow::Result<Vec<types::RegisteredValidator>> {
@@ -69,7 +69,7 @@ impl<'a> MevBoostBlocks<'a> {
     /// is registered with the specified relay.
     ///
     /// [Visit the docs](https://flashbots.github.io/relay-specs/#/Data/getValidatorRegistration) for more info.
-    pub async fn query_get_validator_registration(
+    pub async fn get_validator_registration(
         &self,
         relay_name: &str,
         pubkey: &str,
@@ -118,10 +118,10 @@ impl<'a> MevBoostBlocks<'a> {
 mod tests {
 
     #[tokio::test]
-    async fn test_query_validator_registrations_for_current_and_next_epoch() -> anyhow::Result<()> {
-        let client = super::MevBoostBlocks::default();
+    async fn test_get_validator_registrations_for_current_and_next_epoch() -> anyhow::Result<()> {
+        let client = super::Client::default();
         let response = client
-            .query_get_validators_for_current_and_next_epoch("flashbots")
+            .get_validators_for_current_and_next_epoch("flashbots")
             .await?;
 
         assert!(!response.is_empty());
@@ -129,11 +129,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_query_validator_registration() -> anyhow::Result<()> {
-        let client = super::MevBoostBlocks::default();
+    async fn test_get_validator_registration() -> anyhow::Result<()> {
+        let client = super::Client::default();
         let pubkey = "0xacb2e8af472337d76290b8da9345d4edf6a5f7ce573a319340ce53112551f465878d996ad6745b80b64db1104e20c5d3";
         let response = client
-            .query_get_validator_registration("flashbots", pubkey)
+            .get_validator_registration("flashbots", pubkey)
             .await?;
 
         assert_eq!(response.message.pubkey, pubkey);

@@ -21,7 +21,8 @@ Then you can use it in your code:
 #[tokio::main]
 pub async fn main() {
     let client = mevboost_relay_api::Client::default();
-
+    let response = client.get_validators_for_current_and_next_epoch("flashbots").await.unwrap();
+    println!("{:?}", response);
 }
 ```
 
