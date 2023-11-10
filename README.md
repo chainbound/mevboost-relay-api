@@ -26,6 +26,8 @@ pub async fn main() {
 }
 ```
 
+You can see all available functionality in the [library documentation](./crates/mevboost-relay-api/README.md) file.
+
 ## Use as a CLI tool
 
 ```shell

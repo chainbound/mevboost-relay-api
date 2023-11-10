@@ -26,16 +26,16 @@ pub mod types;
 #[derive(Debug)]
 pub struct Client<'a> {
     /// List of relay names and endpoints to use for queries.
-    relays: HashMap<&'a str, &'a str>,
+    pub relays: HashMap<&'a str, &'a str>,
     /// HTTP client used for requests.
-    client: reqwest::Client,
+    inner: reqwest::Client,
 }
 
 impl<'a> Default for Client<'a> {
     fn default() -> Self {
         Self {
             relays: constants::DEFAULT_RELAYS.clone(),
-            client: reqwest::Client::new(),
+            inner: reqwest::Client::new(),
         }
     }
 }
@@ -46,8 +46,8 @@ impl<'a> Client<'a> {
     /// Relays are a mapping of relay names to their endpoints.
     /// See [`constants::DEFAULT_RELAYS`] for an example.
     pub fn with_relays(relays: HashMap<&'a str, &'a str>) -> Self {
-        let client = reqwest::Client::new();
-        Self { relays, client }
+        let inner = reqwest::Client::new();
+        Self { relays, inner }
     }
 
     /// Perform a relay query for validator registrations for the current and next epochs.
@@ -87,10 +87,85 @@ impl<'a> Client<'a> {
             .map_err(|e| anyhow::anyhow!("Failed to parse JSON response: {}", e))
     }
 
+    /// Perform a relay query to check if a validator with the given pubkey
+    /// is registered with any of the relays in the client. Returns a hashmap
+    /// of relay names to validator entries. If an entry is not found for a
+    /// given relay, it will not be included in the hashmap.
+    pub async fn get_validator_registration_on_all_relays(
+        &self,
+        pubkey: &str,
+    ) -> anyhow::Result<HashMap<&'a str, types::ValidatorEntry>> {
+        let mut validator_registrations = HashMap::new();
+        for relay_name in self.relays.keys() {
+            match self.get_validator_registration(relay_name, pubkey).await {
+                Ok(relay_res) => {
+                    validator_registrations.insert(*relay_name, relay_res);
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "Failed to get validator registration for pubkey {} on relay {}: {}",
+                        pubkey,
+                        relay_name,
+                        e
+                    );
+                    continue;
+                }
+            }
+        }
+
+        Ok(validator_registrations)
+    }
+
+    /// Performs the following steps:
+    /// 1. Get validator registrations for the current and next epochs for all relays
+    /// 2. Build a map of slot number to relay names that have a validator registered for that slot
+    pub async fn get_validator_registration_for_all_slots_on_all_relays(
+        &self,
+    ) -> anyhow::Result<HashMap<u64, Vec<&'a str>>> {
+        let mut validator_registrations = HashMap::new();
+
+        for relay_name in self.relays.keys() {
+            let relay_res = self
+                .get_validators_for_current_and_next_epoch(relay_name)
+                .await?;
+
+            for validator in relay_res {
+                let relay_names = validator_registrations
+                    .entry(validator.slot)
+                    .or_insert_with(Vec::new);
+
+                relay_names.push(*relay_name);
+            }
+        }
+
+        // Fill all slots with no registrations with an empty vector.
+        // The total number of slots for current + next epoch is 32 + 32 = 64.
+        if let Some(initial_slot) = validator_registrations.keys().min() {
+            for slot in *initial_slot..(*initial_slot + 63) {
+                validator_registrations.entry(slot).or_insert_with(Vec::new);
+            }
+        }
+
+        Ok(validator_registrations)
+    }
+
+    /// Returns a list of slot numbers for which no relays are registered for the current and next epochs.
+    pub async fn get_vanilla_slots_for_current_and_next_epoch(&self) -> anyhow::Result<Vec<u64>> {
+        let all = self
+            .get_validator_registration_for_all_slots_on_all_relays()
+            .await?;
+
+        Ok(all
+            .into_iter()
+            .filter(|(_, v)| v.is_empty())
+            .map(|(k, _)| k)
+            .collect())
+    }
+
     /// Helper function to perform an HTTP get request with standard headers.
     async fn fetch(&self, endpoint: String) -> anyhow::Result<String> {
         let response = self
-            .client
+            .inner
             .request(reqwest::Method::GET, endpoint)
             .header("content-type", "application/json")
             .header("accept", "application/json")
@@ -137,6 +212,39 @@ mod tests {
             .await?;
 
         assert_eq!(response.message.pubkey, pubkey);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_validator_registration_on_all_relays() -> anyhow::Result<()> {
+        let client = super::Client::default();
+        let pubkey = "0xacb2e8af472337d76290b8da9345d4edf6a5f7ce573a319340ce53112551f465878d996ad6745b80b64db1104e20c5d3";
+        let response = client
+            .get_validator_registration_on_all_relays(pubkey)
+            .await?;
+
+        assert!(!response.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_validator_registration_for_all_slots_on_all_relays() -> anyhow::Result<()> {
+        let client = super::Client::default();
+        let response = client
+            .get_validator_registration_for_all_slots_on_all_relays()
+            .await?;
+
+        assert!(!response.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_vanilla_slots_for_current_and_next_epoch() -> anyhow::Result<()> {
+        let client = super::Client::default();
+        let _response = client
+            .get_vanilla_slots_for_current_and_next_epoch()
+            .await?;
+
         Ok(())
     }
 }

@@ -8,8 +8,7 @@ use serde_aux::prelude::*;
 pub struct RegisteredValidator {
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub slot: u64,
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub validator_index: u64,
+    pub validator_index: Option<String>,
     pub entry: ValidatorEntry,
 }
 
