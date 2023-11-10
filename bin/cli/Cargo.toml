@@ -1,14 +1,14 @@
 [package]
-name = "mevboost-blocks-cli"
-version = { workspace = true }
-edition = { workspace = true }
-authors = { workspace = true }
-license = { workspace = true }
+name = "mevboost-relay-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
 
 [dependencies]
-mevboost-blocks-lib = { path = "../../crates/mevboost-blocks" }
-clap = { workspace = true }
-anyhow = { workspace = true }
-inquire = { workspace = true }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
+mevboost-relay-api = { path = "../../crates/mevboost-relay-api" }
+clap.workspace = true
+anyhow.workspace = true
+inquire.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

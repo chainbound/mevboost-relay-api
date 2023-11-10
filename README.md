@@ -1,8 +1,9 @@
-# mevoobst block finder
+# mevboost relay api
 
-This library queries the MEVBoost relays for validator registrations in the current and next epoch,
-and returns a list of blocks that are likely to be produced by mevboost-enabled validators.
+> **Important**
+> Work in progress. Many features are not implemented yet.
 
+This crate implements the [PBS Relay API](https://flashbots.github.io/relay-specs/#/) specs in Rust.
 You can import this as a crate in your Cargo project, or use the CLI tool to run queries manually.
 
 ## Use as a library
@@ -11,22 +12,30 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-mevboost-blocks = { git = "https://github.com/chainbound/mevboost-blocks" }
+mevboost-relay-api = { git = "https://github.com/chainbound/mevboost-relay-api" }
 ```
 
 Then you can use it in your code:
 
 ```rust
-use mevboost_blocks::?;
+#[tokio::main]
+pub async fn main() {
+    let client = mevboost_relay_api::Client::default();
+
+}
 ```
 
 ## Use as a CLI tool
 
-```bash
-cargo install --git https://github.com/chainbound/mevboost-blocks
-mevboost-blocks --help
+```shell
+cargo install --git https://github.com/chainbound/mevboost-relay-api
+mevboost-relay-api --help
 ```
 
 ## License
 
-MIT. Open source & free forever.
+MIT.
+
+## Contributions
+
+Contributions are welcome and encouraged. Just open an issue on Github or submit a PR.
