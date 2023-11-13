@@ -1,10 +1,7 @@
 # mevboost relay api
 
-> **Important**
-> Work in progress. Many features are not implemented yet.
-
-This crate implements the [PBS Relay API](https://flashbots.github.io/relay-specs/#/) specs in Rust.
-You can import this as a crate in your Cargo project, or use the CLI tool to run queries manually.
+> This crate implements the [PBS Relay API](https://flashbots.github.io/relay-specs/#/) specs in Rust.
+> You can import this in your Cargo project, or use the CLI tool to run queries manually.
 
 ## Use as a library
 
@@ -41,4 +38,4 @@ MIT.
 
 ## Contributions
 
-Contributions are welcome and encouraged. Just open an issue on Github or submit a PR.
+Contributions are welcome and encouraged. Please open an issue or submit a pull request.
