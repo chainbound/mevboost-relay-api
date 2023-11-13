@@ -27,6 +27,9 @@ You can see all available functionality in the [library documentation](./crates/
 
 ## Use as a CLI tool
 
+> **Warn**
+> This is not yet implemented.
+
 ```shell
 cargo install --git https://github.com/chainbound/mevboost-relay-api
 mevboost-relay-api --help
