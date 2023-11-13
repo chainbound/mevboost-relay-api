@@ -27,7 +27,7 @@ You can see all available functionality in the [library documentation](./crates/
 
 ## Use as a CLI tool
 
-> **Warn**
+> **Warning**
 > This is not yet implemented.
 
 ```shell
