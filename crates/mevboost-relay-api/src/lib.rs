@@ -87,12 +87,13 @@ impl<'a> Client<'a> {
             .map_err(|e| anyhow::anyhow!("Failed to parse JSON response: {}", e))
     }
 
-    /// Perform a relay query to get the
+    /// Perform a relay query to get the payloads delivered by the relay to the proposer.
+    /// Query options act as filters.
     pub async fn get_payload_delivered_bidtraces(
         &self,
         relay_name: &str,
         opts: types::PayloadDeliveredQueryOptions,
-    ) -> anyhow::Result<Vec<types::DeliveredPayloadBidtrace>> {
+    ) -> anyhow::Result<Vec<types::PayloadBidtrace>> {
         let relay_url = self.get_relay_url(relay_name)?;
         let endpoint = format!(
             "{}{}{}",
@@ -102,7 +103,27 @@ impl<'a> Client<'a> {
         );
         let response = self.fetch(endpoint).await?;
 
-        serde_json::from_str::<Vec<types::DeliveredPayloadBidtrace>>(&response)
+        serde_json::from_str::<Vec<types::PayloadBidtrace>>(&response)
+            .map_err(|e| anyhow::anyhow!("Failed to parse JSON response: {}", e))
+    }
+
+    /// Perform a relay query to get the builder bid submissions.
+    /// Query options act as filters.
+    pub async fn get_builder_blocks_received(
+        &self,
+        relay_name: &str,
+        opts: types::BuilderBidsReceivedOptions,
+    ) -> anyhow::Result<Vec<types::BuilderBlockBidtrace>> {
+        let relay_url = self.get_relay_url(relay_name)?;
+        let endpoint = format!(
+            "{}{}{}",
+            relay_url,
+            *constants::GET_BUILDER_BLOCKS_RECEIVED,
+            opts.to_string()
+        );
+        let response = self.fetch(endpoint).await?;
+
+        serde_json::from_str::<Vec<types::BuilderBlockBidtrace>>(&response)
             .map_err(|e| anyhow::anyhow!("Failed to parse JSON response: {}", e))
     }
 
@@ -279,6 +300,23 @@ mod tests {
             .get_payload_delivered_bidtraces("ultrasound", opts)
             .await?;
 
+        assert!(!response.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_builder_blocks_received() -> anyhow::Result<()> {
+        let client = super::Client::default();
+        let opts = super::types::BuilderBidsReceivedOptions {
+            slot: Some(7761220),
+            ..Default::default()
+        };
+
+        let response = client
+            .get_builder_blocks_received("ultrasound", opts)
+            .await?;
+
+        dbg!(&response);
         assert!(!response.is_empty());
         Ok(())
     }

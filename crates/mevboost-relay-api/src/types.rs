@@ -39,7 +39,7 @@ pub struct PayloadDeliveredQueryOptions {
     pub slot: Option<u64>,
     /// A starting slot for multiple results.
     pub cursor: Option<u64>,
-    /// The number of results
+    /// The number of results.
     pub limit: Option<u64>,
     /// A block hash.
     pub block_hash: Option<String>,
@@ -49,7 +49,7 @@ pub struct PayloadDeliveredQueryOptions {
     pub proposer_pubkey: Option<String>,
     /// A specific builder public key.
     pub builder_pubkey: Option<String>,
-    /// Sort results in order of: `value` or `-value`
+    /// Sort results in order of: `value` or `-value`.
     pub order_by: Option<String>,
 }
 
@@ -90,7 +90,7 @@ impl ToString for PayloadDeliveredQueryOptions {
 /// Entry for the validator payload delivered response.
 #[derive(Deserialize, Debug)]
 #[allow(missing_docs)]
-pub struct DeliveredPayloadBidtrace {
+pub struct PayloadBidtrace {
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub slot: u64,
     pub parent_hash: String,
@@ -107,4 +107,55 @@ pub struct DeliveredPayloadBidtrace {
     pub num_tx: u64,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub block_number: u64,
+}
+
+/// Filter arguments for the get builder blocks bidtraces relay query
+#[derive(Debug, Default)]
+pub struct BuilderBidsReceivedOptions {
+    /// A specific slot number.
+    pub slot: Option<u64>,
+    /// A block hash.
+    pub block_hash: Option<String>,
+    /// A specific block number.
+    pub block_number: Option<u64>,
+    /// A specific builder public key.
+    pub builder_pubkey: Option<String>,
+    /// The number of results.
+    pub limit: Option<u64>,
+}
+
+impl ToString for BuilderBidsReceivedOptions {
+    fn to_string(&self) -> String {
+        let mut query = String::new();
+        query.push('?');
+
+        if let Some(slot) = self.slot {
+            query.push_str(&format!("slot={}&", slot));
+        }
+        if let Some(block_hash) = &self.block_hash {
+            query.push_str(&format!("block_hash={}&", block_hash));
+        }
+        if let Some(block_number) = self.block_number {
+            query.push_str(&format!("block_number={}&", block_number));
+        }
+        if let Some(builder_pubkey) = &self.builder_pubkey {
+            query.push_str(&format!("builder_pubkey={}&", builder_pubkey));
+        }
+        if let Some(limit) = self.limit {
+            query.push_str(&format!("limit={}&", limit));
+        }
+
+        query
+    }
+}
+
+/// Entry for the builder block bidtrace response.
+#[derive(Deserialize, Debug)]
+#[allow(missing_docs)]
+pub struct BuilderBlockBidtrace {
+    #[serde(flatten)]
+    pub payload: PayloadBidtrace,
+    #[serde(deserialize_with = "deserialize_datetime_utc_from_milliseconds")]
+    pub timestamp_ms: DateTime<Utc>,
+    pub optimistic_submission: Option<bool>,
 }

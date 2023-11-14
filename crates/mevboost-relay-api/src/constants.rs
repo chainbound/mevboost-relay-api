@@ -29,4 +29,9 @@ lazy_static! {
     ///
     /// [Visit the docs](https://flashbots.github.io/relay-specs/#/Data/getDeliveredPayloads) for more info.
     pub static ref GET_DELIVERED_PAYLOADS: &'static str = "/relay/v1/data/bidtraces/proposer_payload_delivered";
+
+    /// Relay endpoint for getting the block submission bids delivered to the relay.
+    ///
+    /// [Visit the docs](https://flashbots.github.io/relay-specs/#/Data/getReceivedBids) for more info.
+    pub static ref GET_BUILDER_BLOCKS_RECEIVED: &'static str = "/relay/v1/data/bidtraces/builder_blocks_received";
 }
