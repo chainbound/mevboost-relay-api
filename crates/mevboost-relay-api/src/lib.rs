@@ -26,7 +26,7 @@ pub mod types;
 #[derive(Debug)]
 pub struct Client<'a> {
     /// List of relay names and endpoints to use for queries.
-    pub relays: HashMap<&'a str, &'a str>,
+    relays: HashMap<&'a str, &'a str>,
     /// HTTP client used for requests.
     inner: reqwest::Client,
 }
@@ -48,6 +48,13 @@ impl<'a> Client<'a> {
     pub fn with_relays(relays: HashMap<&'a str, &'a str>) -> Self {
         let inner = reqwest::Client::new();
         Self { relays, inner }
+    }
+
+    /// Check if the client contains a relay with the given name.
+    ///
+    /// This is useful for checking if a relay is available before performing a query.
+    pub fn contains(&self, relay_name: &str) -> bool {
+        self.relays.contains_key(relay_name)
     }
 
     /// Perform a relay query for validator registrations for the current and next epochs.
@@ -92,7 +99,7 @@ impl<'a> Client<'a> {
     pub async fn get_payload_delivered_bidtraces(
         &self,
         relay_name: &str,
-        opts: types::PayloadDeliveredQueryOptions,
+        opts: &types::PayloadDeliveredQueryOptions,
     ) -> anyhow::Result<Vec<types::PayloadBidtrace>> {
         let relay_url = self.get_relay_url(relay_name)?;
         let endpoint = format!(
@@ -107,12 +114,38 @@ impl<'a> Client<'a> {
             .map_err(|e| anyhow::anyhow!("Failed to parse JSON response: {}", e))
     }
 
+    /// Perform queries on all relays to get the payloads delivered by each relay to proposers.
+    /// Query options act as filters. Returns a hashmap of relay names to payload bidtraces.
+    pub async fn get_payloads_delivered_bidtraces_on_all_relays(
+        &self,
+        opts: &types::PayloadDeliveredQueryOptions,
+    ) -> anyhow::Result<HashMap<&'a str, Vec<types::PayloadBidtrace>>> {
+        let mut payloads_delivered = HashMap::new();
+        for relay_name in self.relays.keys() {
+            match self.get_payload_delivered_bidtraces(relay_name, opts).await {
+                Ok(relay_res) => {
+                    payloads_delivered.insert(*relay_name, relay_res);
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "Failed to get payloads delivered for relay {}: {}",
+                        relay_name,
+                        e
+                    );
+                    continue;
+                }
+            }
+        }
+
+        Ok(payloads_delivered)
+    }
+
     /// Perform a relay query to get the builder bid submissions.
     /// Query options act as filters.
     pub async fn get_builder_blocks_received(
         &self,
         relay_name: &str,
-        opts: types::BuilderBidsReceivedOptions,
+        opts: &types::BuilderBidsReceivedOptions,
     ) -> anyhow::Result<Vec<types::BuilderBlockBidtrace>> {
         let relay_url = self.get_relay_url(relay_name)?;
         let endpoint = format!(
@@ -125,6 +158,32 @@ impl<'a> Client<'a> {
 
         serde_json::from_str::<Vec<types::BuilderBlockBidtrace>>(&response)
             .map_err(|e| anyhow::anyhow!("Failed to parse JSON response: {}", e))
+    }
+
+    /// Perform queries on all relays to get the builder bid submissions.
+    /// Query options act as filters. Returns a hashmap of relay names to builder block bidtraces.
+    pub async fn get_builder_blocks_received_on_all_relays(
+        &self,
+        opts: &types::BuilderBidsReceivedOptions,
+    ) -> anyhow::Result<HashMap<&'a str, Vec<types::BuilderBlockBidtrace>>> {
+        let mut builder_blocks_received = HashMap::new();
+        for relay_name in self.relays.keys() {
+            match self.get_builder_blocks_received(relay_name, opts).await {
+                Ok(relay_res) => {
+                    builder_blocks_received.insert(*relay_name, relay_res);
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "Failed to get builder blocks received for relay {}: {}",
+                        relay_name,
+                        e
+                    );
+                    continue;
+                }
+            }
+        }
+
+        Ok(builder_blocks_received)
     }
 
     /// Perform a relay query to check if a validator with the given pubkey
@@ -297,7 +356,7 @@ mod tests {
         };
 
         let response = client
-            .get_payload_delivered_bidtraces("ultrasound", opts)
+            .get_payload_delivered_bidtraces("ultrasound", &opts)
             .await?;
 
         assert!(!response.is_empty());
@@ -313,7 +372,7 @@ mod tests {
         };
 
         let response = client
-            .get_builder_blocks_received("ultrasound", opts)
+            .get_builder_blocks_received("ultrasound", &opts)
             .await?;
 
         dbg!(&response);
