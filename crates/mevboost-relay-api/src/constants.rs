@@ -24,4 +24,9 @@ lazy_static! {
     ///
     /// [Visit the docs](https://flashbots.github.io/relay-specs/#/Data/getValidatorRegistration) for more info.
     pub static ref CHECK_VALIDATOR_REGISTRATION: &'static str = "/relay/v1/data/validator_registration";
+
+    /// Relay endpoint for getting the payloads that were delivered to proposers.
+    ///
+    /// [Visit the docs](https://flashbots.github.io/relay-specs/#/Data/getDeliveredPayloads) for more info.
+    pub static ref GET_DELIVERED_PAYLOADS: &'static str = "/relay/v1/data/bidtraces/proposer_payload_delivered";
 }

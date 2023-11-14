@@ -87,6 +87,25 @@ impl<'a> Client<'a> {
             .map_err(|e| anyhow::anyhow!("Failed to parse JSON response: {}", e))
     }
 
+    /// Perform a relay query to get the
+    pub async fn get_payload_delivered_bidtraces(
+        &self,
+        relay_name: &str,
+        opts: types::PayloadDeliveredQueryOptions,
+    ) -> anyhow::Result<Vec<types::DeliveredPayloadBidtrace>> {
+        let relay_url = self.get_relay_url(relay_name)?;
+        let endpoint = format!(
+            "{}{}{}",
+            relay_url,
+            *constants::GET_DELIVERED_PAYLOADS,
+            opts.to_string()
+        );
+        let response = self.fetch(endpoint).await?;
+
+        serde_json::from_str::<Vec<types::DeliveredPayloadBidtrace>>(&response)
+            .map_err(|e| anyhow::anyhow!("Failed to parse JSON response: {}", e))
+    }
+
     /// Perform a relay query to check if a validator with the given pubkey
     /// is registered with any of the relays in the client. Returns a hashmap
     /// of relay names to validator entries. If an entry is not found for a
@@ -245,6 +264,22 @@ mod tests {
             .get_vanilla_slots_for_current_and_next_epoch()
             .await?;
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_payload_delivered_bidtraces() -> anyhow::Result<()> {
+        let client = super::Client::default();
+        let opts = super::types::PayloadDeliveredQueryOptions {
+            slot: Some(7761220),
+            ..Default::default()
+        };
+
+        let response = client
+            .get_payload_delivered_bidtraces("ultrasound", opts)
+            .await?;
+
+        assert!(!response.is_empty());
         Ok(())
     }
 }
