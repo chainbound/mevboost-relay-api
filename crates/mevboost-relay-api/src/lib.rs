@@ -58,7 +58,7 @@ impl<'a> Client<'a> {
         relay_name: &str,
     ) -> anyhow::Result<Vec<types::RegisteredValidator>> {
         let relay_url = self.get_relay_url(relay_name)?;
-        let endpoint = format!("{}{}", relay_url, *constants::GET_VALIDATORS_ENDPOINT);
+        let endpoint = format!("{}{}", relay_url, constants::GET_VALIDATORS_ENDPOINT);
         let response = self.fetch(endpoint).await?;
 
         serde_json::from_str::<Vec<types::RegisteredValidator>>(&response)
@@ -78,7 +78,7 @@ impl<'a> Client<'a> {
         let endpoint = format!(
             "{}{}?pubkey={}",
             relay_url,
-            *constants::CHECK_VALIDATOR_REGISTRATION,
+            constants::CHECK_VALIDATOR_REGISTRATION,
             pubkey
         );
         let response = self.fetch(endpoint).await?;
@@ -98,7 +98,7 @@ impl<'a> Client<'a> {
         let endpoint = format!(
             "{}{}{}",
             relay_url,
-            *constants::GET_DELIVERED_PAYLOADS,
+            constants::GET_DELIVERED_PAYLOADS,
             opts.to_string()
         );
         let response = self.fetch(endpoint).await?;
@@ -118,7 +118,7 @@ impl<'a> Client<'a> {
         let endpoint = format!(
             "{}{}{}",
             relay_url,
-            *constants::GET_BUILDER_BLOCKS_RECEIVED,
+            constants::GET_BUILDER_BLOCKS_RECEIVED,
             opts.to_string()
         );
         let response = self.fetch(endpoint).await?;
