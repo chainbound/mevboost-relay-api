@@ -13,15 +13,25 @@ lazy_static! {
         m.insert("bloxroute-regulated", "https://0xb0b07cd0abef743db4260b0ed50619cf6ad4d82064cb4fbec9d3ec530f7c5e6793d9f286c4e082c0244ffb9f2658fe88@bloxroute.regulated.blxrbdn.com");
         m
     };
-
-    /// Relay endpoint for getting a list of validator registrations
-    /// for validators scheduled to propose in the current and next epoch.
-    ///
-    /// [Visit the docs](https://flashbots.github.io/relay-specs/#/Builder/getValidators) for more info.
-    pub static ref GET_VALIDATORS_ENDPOINT: &'static str = "/relay/v1/builder/validators";
-
-    /// Relay endpoint for checking that a validator is registered with a relay.
-    ///
-    /// [Visit the docs](https://flashbots.github.io/relay-specs/#/Data/getValidatorRegistration) for more info.
-    pub static ref CHECK_VALIDATOR_REGISTRATION: &'static str = "/relay/v1/data/validator_registration";
 }
+
+/// Relay endpoint for getting a list of validator registrations
+/// for validators scheduled to propose in the current and next epoch.
+///
+/// [Visit the docs](https://flashbots.github.io/relay-specs/#/Builder/getValidators) for more info.
+pub static GET_VALIDATORS_ENDPOINT: &str = "/relay/v1/builder/validators";
+
+/// Relay endpoint for checking that a validator is registered with a relay.
+///
+/// [Visit the docs](https://flashbots.github.io/relay-specs/#/Data/getValidatorRegistration) for more info.
+pub static CHECK_VALIDATOR_REGISTRATION: &str = "/relay/v1/data/validator_registration";
+
+/// Relay endpoint for getting the payloads that were delivered to proposers.
+///
+/// [Visit the docs](https://flashbots.github.io/relay-specs/#/Data/getDeliveredPayloads) for more info.
+pub static GET_DELIVERED_PAYLOADS: &str = "/relay/v1/data/bidtraces/proposer_payload_delivered";
+
+/// Relay endpoint for getting the block submission bids delivered to the relay.
+///
+/// [Visit the docs](https://flashbots.github.io/relay-specs/#/Data/getReceivedBids) for more info.
+pub static GET_BUILDER_BLOCKS_RECEIVED: &str = "/relay/v1/data/bidtraces/builder_blocks_received";

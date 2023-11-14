@@ -21,6 +21,14 @@ Relay endpoint: `/relay/v1/data/validator_registration`.
 Returns the validator registration info by the given pubkey and relay name.
 Will return an error if the validator is not registered with that relay.
 
+### `get_validator_payload_delivered_bidtraces`
+
+Relay endpoint: `/relay/v1/data/bidtraces/proposer_payload_delivered`.
+[Link to the specs](https://flashbots.github.io/relay-specs/#/Data/getDeliveredPayloads).
+
+Returns the payloads that were delivered to proposers. Payloads become available after the relay
+responds to a `getPayloads` request from the proposer. [Query arguments](./src/types.rs#L37) are used as filters.
+
 ### `get_validator_registration_on_all_relays`
 
 Convenience method that returns a hashmap of relay name to validator registration info, for the given pubkey.
