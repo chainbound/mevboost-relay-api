@@ -155,7 +155,7 @@ impl ToString for BuilderBidsReceivedOptions {
 pub struct BuilderBlockBidtrace {
     #[serde(flatten)]
     pub payload: PayloadBidtrace,
-    #[serde(deserialize_with = "deserialize_datetime_utc_from_milliseconds")]
-    pub timestamp_ms: DateTime<Utc>,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub timestamp_ms: u128,
     pub optimistic_submission: Option<bool>,
 }

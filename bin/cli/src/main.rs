@@ -27,8 +27,7 @@ enum OutputMethod {
     Human,
     /// Output in CSV format
     Csv,
-    /// Output in JSON format, to a file path or
-    /// to stdout if no file path is provided.
+    /// Output in JSON format
     Json,
 }
 

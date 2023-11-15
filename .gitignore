@@ -23,3 +23,6 @@ target/
 
 # CLI default out dir for CSV files
 out/
+
+# Environment files
+.env
