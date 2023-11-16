@@ -22,7 +22,7 @@ target/
 /.helix/
 
 # CLI default out dir for CSV files
-out/
+output/
 
 # Environment files
 .env

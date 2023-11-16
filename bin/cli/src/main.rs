@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use clap::{Parser, Subcommand, ValueEnum};
 use mevboost_relay_api::{
     types::{BuilderBidsReceivedOptions, PayloadDeliveredQueryOptions},
@@ -13,11 +15,11 @@ struct Args {
     command: Command,
     /// The output method to use. Default: human readable text.
     #[clap(long, short = 'o', default_value = "human")]
-    output_method: OutputMethod,
+    output: OutputMethod,
     /// The path to write the output to. If not provided,
-    /// output will be written to stdout.
+    /// will default to the current working directory.
     #[clap(long, short = 'p')]
-    output_path: Option<String>,
+    path: Option<String>,
 }
 
 #[derive(Default, ValueEnum, Clone)]
@@ -58,10 +60,10 @@ async fn main() -> anyhow::Result<()> {
 
     let client = Client::default();
 
-    println!();
-    if !matches!(args.output_method, OutputMethod::Human) {
-        todo!("Only human output is currently supported")
-    }
+    let mut output_file_path = args
+        .path
+        .map(Into::into)
+        .unwrap_or(std::env::current_dir()?.join("output"));
 
     match args.command {
         Command::PayloadsDelivered { slot } => {
@@ -72,19 +74,61 @@ async fn main() -> anyhow::Result<()> {
                 })
                 .await?;
 
-            println!("{:#?}", payloads);
+            match args.output {
+                OutputMethod::Human => println!("{:#?}", &payloads),
+                OutputMethod::Csv => unimplemented!(),
+                OutputMethod::Json => {
+                    output_file_path = output_file_path
+                        .join("payloads-delivered")
+                        .join(format!("{}.json", slot));
+                    write_json(output_file_path.clone(), payloads)?;
+                }
+            }
         }
 
         Command::BlockBids { slot, block_hash } => {
+            if slot.is_none() && block_hash.is_none() {
+                anyhow::bail!("Must provide either a slot or block hash");
+            }
+
             let block_bids = client
                 .get_builder_blocks_received_on_all_relays(&BuilderBidsReceivedOptions {
                     slot,
-                    block_hash,
+                    block_hash: block_hash.clone(),
                     ..Default::default()
                 })
                 .await?;
 
-            println!("{:#?}", block_bids);
+            let query_name = if let Some(slot) = slot {
+                format!("slot-{}", slot)
+            } else {
+                format!(
+                    "block-hash-{}",
+                    block_hash
+                        .as_ref()
+                        .unwrap()
+                        .chars()
+                        .take(8)
+                        .collect::<String>()
+                )
+            };
+            output_file_path = output_file_path.join(format!("block-bids-{}", query_name));
+
+            match args.output {
+                OutputMethod::Human => println!("{:#?}", &block_bids),
+                OutputMethod::Csv => unimplemented!(),
+                OutputMethod::Json => {
+                    for (relay, bids) in block_bids {
+                        if bids.is_empty() {
+                            continue;
+                        }
+
+                        let filename = format!("{}.json", relay);
+                        println!("Writing {} bids to {}", bids.len(), filename);
+                        write_json(output_file_path.join(filename), bids)?;
+                    }
+                }
+            }
         }
 
         Command::WinningBidTimestamp { slot } => {
@@ -121,6 +165,32 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    println!();
+    Ok(())
+}
+
+#[allow(unused)]
+fn write_csv<T: serde::Serialize>(path: impl AsRef<Path>, data: Vec<T>) -> anyhow::Result<()> {
+    let path = path.as_ref();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let mut res = csv::Writer::from_path(path)?;
+    for row in data {
+        res.serialize(row)?;
+    }
+    res.flush()?;
+    Ok(())
+}
+
+#[allow(unused)]
+fn write_json<T: serde::Serialize>(path: impl AsRef<Path>, data: T) -> anyhow::Result<()> {
+    let path = path.as_ref();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let mut res = std::fs::File::create(path)?;
+    serde_json::to_writer_pretty(&mut res, &data)?;
     Ok(())
 }

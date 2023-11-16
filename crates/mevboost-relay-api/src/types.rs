@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_aux::prelude::*;
 
 /// Validator info for a given slot.
@@ -88,7 +88,7 @@ impl ToString for PayloadDeliveredQueryOptions {
 }
 
 /// Entry for the validator payload delivered response.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[allow(missing_docs)]
 pub struct PayloadBidtrace {
     #[serde(deserialize_with = "deserialize_number_from_string")]
@@ -150,12 +150,13 @@ impl ToString for BuilderBidsReceivedOptions {
 }
 
 /// Entry for the builder block bidtrace response.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[allow(missing_docs)]
 pub struct BuilderBlockBidtrace {
     #[serde(flatten)]
     pub payload: PayloadBidtrace,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub timestamp_ms: u128,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub optimistic_submission: Option<bool>,
 }
