@@ -26,7 +26,7 @@ pub mod types;
 #[derive(Debug)]
 pub struct Client<'a> {
     /// List of relay names and endpoints to use for queries.
-    pub relays: HashMap<&'a str, &'a str>,
+    relays: HashMap<&'a str, &'a str>,
     /// HTTP client used for requests.
     inner: reqwest::Client,
 }
@@ -50,6 +50,13 @@ impl<'a> Client<'a> {
         Self { relays, inner }
     }
 
+    /// Check if the client contains a relay with the given name.
+    ///
+    /// This is useful for checking if a relay is available before performing a query.
+    pub fn contains(&self, relay_name: &str) -> bool {
+        self.relays.contains_key(relay_name)
+    }
+
     /// Perform a relay query for validator registrations for the current and next epochs.
     ///
     /// [Visit the docs](https://flashbots.github.io/relay-specs/#/Builder/getValidators) for more info.
@@ -58,7 +65,7 @@ impl<'a> Client<'a> {
         relay_name: &str,
     ) -> anyhow::Result<Vec<types::RegisteredValidator>> {
         let relay_url = self.get_relay_url(relay_name)?;
-        let endpoint = format!("{}{}", relay_url, *constants::GET_VALIDATORS_ENDPOINT);
+        let endpoint = format!("{}{}", relay_url, constants::GET_VALIDATORS_ENDPOINT);
         let response = self.fetch(endpoint).await?;
 
         serde_json::from_str::<Vec<types::RegisteredValidator>>(&response)
@@ -78,13 +85,105 @@ impl<'a> Client<'a> {
         let endpoint = format!(
             "{}{}?pubkey={}",
             relay_url,
-            *constants::CHECK_VALIDATOR_REGISTRATION,
+            constants::CHECK_VALIDATOR_REGISTRATION,
             pubkey
         );
         let response = self.fetch(endpoint).await?;
 
         serde_json::from_str::<types::ValidatorEntry>(&response)
             .map_err(|e| anyhow::anyhow!("Failed to parse JSON response: {}", e))
+    }
+
+    /// Perform a relay query to get the payloads delivered by the relay to the proposer.
+    /// Query options act as filters.
+    pub async fn get_payload_delivered_bidtraces(
+        &self,
+        relay_name: &str,
+        opts: &types::PayloadDeliveredQueryOptions,
+    ) -> anyhow::Result<Vec<types::PayloadBidtrace>> {
+        let relay_url = self.get_relay_url(relay_name)?;
+        let endpoint = format!(
+            "{}{}{}",
+            relay_url,
+            constants::GET_DELIVERED_PAYLOADS,
+            opts.to_string()
+        );
+        let response = self.fetch(endpoint).await?;
+
+        serde_json::from_str::<Vec<types::PayloadBidtrace>>(&response)
+            .map_err(|e| anyhow::anyhow!("Failed to parse JSON response: {}", e))
+    }
+
+    /// Perform queries on all relays to get the payloads delivered by each relay to proposers.
+    /// Query options act as filters. Returns a hashmap of relay names to payload bidtraces.
+    pub async fn get_payloads_delivered_bidtraces_on_all_relays(
+        &self,
+        opts: &types::PayloadDeliveredQueryOptions,
+    ) -> anyhow::Result<HashMap<&'a str, Vec<types::PayloadBidtrace>>> {
+        let mut payloads_delivered = HashMap::new();
+        for relay_name in self.relays.keys() {
+            match self.get_payload_delivered_bidtraces(relay_name, opts).await {
+                Ok(relay_res) => {
+                    payloads_delivered.insert(*relay_name, relay_res);
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "Failed to get payloads delivered for relay {}: {}",
+                        relay_name,
+                        e
+                    );
+                    continue;
+                }
+            }
+        }
+
+        Ok(payloads_delivered)
+    }
+
+    /// Perform a relay query to get the builder bid submissions.
+    /// Query options act as filters.
+    pub async fn get_builder_blocks_received(
+        &self,
+        relay_name: &str,
+        opts: &types::BuilderBidsReceivedOptions,
+    ) -> anyhow::Result<Vec<types::BuilderBlockBidtrace>> {
+        let relay_url = self.get_relay_url(relay_name)?;
+        let endpoint = format!(
+            "{}{}{}",
+            relay_url,
+            constants::GET_BUILDER_BLOCKS_RECEIVED,
+            opts.to_string()
+        );
+        let response = self.fetch(endpoint).await?;
+
+        serde_json::from_str::<Vec<types::BuilderBlockBidtrace>>(&response)
+            .map_err(|e| anyhow::anyhow!("Failed to parse JSON response: {}", e))
+    }
+
+    /// Perform queries on all relays to get the builder bid submissions.
+    /// Query options act as filters. Returns a hashmap of relay names to builder block bidtraces.
+    pub async fn get_builder_blocks_received_on_all_relays(
+        &self,
+        opts: &types::BuilderBidsReceivedOptions,
+    ) -> anyhow::Result<HashMap<&'a str, Vec<types::BuilderBlockBidtrace>>> {
+        let mut builder_blocks_received = HashMap::new();
+        for relay_name in self.relays.keys() {
+            match self.get_builder_blocks_received(relay_name, opts).await {
+                Ok(relay_res) => {
+                    builder_blocks_received.insert(*relay_name, relay_res);
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "Failed to get builder blocks received for relay {}: {}",
+                        relay_name,
+                        e
+                    );
+                    continue;
+                }
+            }
+        }
+
+        Ok(builder_blocks_received)
     }
 
     /// Perform a relay query to check if a validator with the given pubkey
@@ -245,6 +344,39 @@ mod tests {
             .get_vanilla_slots_for_current_and_next_epoch()
             .await?;
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_payload_delivered_bidtraces() -> anyhow::Result<()> {
+        let client = super::Client::default();
+        let opts = super::types::PayloadDeliveredQueryOptions {
+            slot: Some(7761220),
+            ..Default::default()
+        };
+
+        let response = client
+            .get_payload_delivered_bidtraces("ultrasound", &opts)
+            .await?;
+
+        assert!(!response.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_builder_blocks_received() -> anyhow::Result<()> {
+        let client = super::Client::default();
+        let opts = super::types::BuilderBidsReceivedOptions {
+            slot: Some(7761220),
+            ..Default::default()
+        };
+
+        let response = client
+            .get_builder_blocks_received("ultrasound", &opts)
+            .await?;
+
+        dbg!(&response);
+        assert!(!response.is_empty());
         Ok(())
     }
 }
